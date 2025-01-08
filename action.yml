@@ -1,0 +1,82 @@
+name: 'Claude PR Review'
+description: 'Review pull requests using Claude AI'
+
+inputs:
+  node-version:
+    description: 'Node.js version'
+    default: '20'
+    required: false
+  pnpm-version:
+    description: 'pnpm version'
+    default: '9'
+    required: false
+  anthropic-api-key:
+    description: 'Anthropic API key'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - uses: pnpm/action-setup@v3
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+    
+    - uses: actions/cache@v4
+      name: Setup pnpm cache
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+    
+    - name: Display Versions
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        pnpm -v && node -v
+    
+    - name: Install Package
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        pnpm i
+    
+    - name: Install Dependencies in Action Directory
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        pnpm install --frozen-lockfile
+    
+    - name: Get PR diff
+      id: diff
+      shell: bash
+      run: |
+        git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > ${{ github.action_path }}/diff.txt
+    
+    - name: Review PR by Claude
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        pnpm node --no-warnings --loader ts-node/esm ./src/review.ts
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OWNER: ${{ github.repository_owner }}
+        REPO: ${{ github.event.repository.name }}
+        PULL_NUMBER: ${{ github.event.pull_request.number }}
+        COMMIT_ID: ${{ github.event.pull_request.head.sha }}
+        DIFF_FILE_PATH: diff.txt
