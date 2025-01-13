@@ -16,6 +16,12 @@ inputs:
   target-path:
     description: '差分を取得するフォルダ。スペース区切りで指定。'
     required: false
+  system-prompt:
+    description: 'Claudeのシステムプロンプト'
+    required: false
+  message-template:
+    description: 'Claudeへのメッセージテンプレート'
+    required: false
 
 runs:
   using: "composite"
@@ -84,3 +90,5 @@ runs:
         PULL_NUMBER: ${{ github.event.pull_request.number }}
         COMMIT_ID: ${{ github.event.pull_request.head.sha }}
         DIFF_FILE_PATH: diff.txt
+        SYSTEM_PROMPT: ${{ inputs.system-prompt }}
+        MESSAGE_TEMPLATE: ${{ inputs.message-template }}

@@ -19,6 +19,9 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN
 });
 
+const systemPrompt = process.env.SYSTEM_PROMPT || SYSTEM_PROMPT;
+const messageTemplate = process.env.MESSAGE_TEMPLATE || MESSAGE_TEMPLATE;
+
 export async function review() {
 
   const filePath = path.join(process.cwd(), process.env.DIFF_FILE_PATH!);
@@ -32,7 +35,7 @@ export async function review() {
     model: 'claude-3-5-sonnet-20241022',
     max_tokens: 8192,
     temperature: 0,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     tools: [
       {
         name: 'add_review_for_file',
@@ -65,7 +68,7 @@ export async function review() {
     messages: [
       {
         'role': 'user',
-        'content': `${MESSAGE_TEMPLATE}${content}`
+        'content': `${messageTemplate}${content}`
       },
     ],
     tool_choice: {type: "any"}
