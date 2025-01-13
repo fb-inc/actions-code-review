@@ -3,6 +3,7 @@ import { Octokit } from '@octokit/rest';
 import { MESSAGE_TEMPLATE, SYSTEM_PROMPT } from './prompt.js';
 import * as path from 'path';
 import { readFile } from 'fs/promises';
+import { FileCommentSchema, MultiLineCommentSchema, SingleLineCommentSchema } from './schemas/request.js';
 
 type ReviewResult = {
   path: string
@@ -32,48 +33,42 @@ export async function review() {
     max_tokens: 8192,
     temperature: 0,
     system: SYSTEM_PROMPT,
-    tools: [{
-      name: 'add_review',
-      description: 'githubのPRにレビューを追加します。',
-      input_schema: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'The relative path to the file that necessitates a comment.'
-          },
-          line: {
-            type: 'number',
-            description: 'The line of the blob in the pull request diff that the comment applies to. For a multi-line comment, the last line of the range that your comment applies to.',
-          },
-          side: {
-            type: 'string',
-            enum: ['RIGHT', 'LEFT'],
-            description: 'In a split diff view, the side of the diff that the pull request\'s changes appear on. Can be LEFT or RIGHT.'
-          },
-          start_line: {
-            type: 'number',
-            description: 'The start_line is the first line in the pull request diff that your multi-line comment applies to. '
-          },
-          start_side: {
-            type: 'string',
-            enum: ['RIGHT', 'LEFT'],
-            description: 'Required when using multi-line. The start_line is the first line in the pull request diff that your multi-line comment applies to. Can be LEFT or RIGHT.'
-          },
-          body: {
-            type: 'string',
-            description: 'Detailed Japanese comments on feedback in Markdown format.'
-          },
+    tools: [
+      {
+        name: 'add_review_for_file',
+        description: 'githubのPRに特定のfileを指定してレビューを追加します。',
+        input_schema: {
+          type: 'object',
+          properties: FileCommentSchema.shape,
+          required: Object.keys(FileCommentSchema.shape)
+        }
+      },
+      {
+        name: 'add_review_for_single_line',
+        description: 'githubのPRに特定の1行を指定してレビューを追加します。',
+        input_schema: {
+          type: 'object',
+          properties: SingleLineCommentSchema.shape,
+          required: Object.keys(SingleLineCommentSchema.shape)
+        }
+      },
+      {
+        name: 'add_review_for_multi_line',
+        description: 'githubのPRに行範囲を指定してレビューを追加します。',
+        input_schema: {
+          type: 'object',
+          properties: MultiLineCommentSchema.shape,
+          required: Object.keys(MultiLineCommentSchema.shape)
         }
       }
-    }],
+    ],
     messages: [
       {
         'role': 'user',
         'content': `${MESSAGE_TEMPLATE}${content}`
       },
     ],
-    tool_choice: {type: "tool", name: "add_review"}
+    tool_choice: {type: "any"}
   })
 
   msg.content.forEach((con) => console.log(con))

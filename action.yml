@@ -13,6 +13,9 @@ inputs:
   anthropic-api-key:
     description: 'Anthropic API key'
     required: true
+  target-path:
+    description: '差分を取得するフォルダ。スペース区切りで指定。'
+    required: false
 
 runs:
   using: "composite"
@@ -65,7 +68,8 @@ runs:
       id: diff
       shell: bash
       run: |
-        git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > ${{ github.action_path }}/diff.txt
+        cd ${{ github.action_path }}
+        git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ inputs.target-path }} > diff.txt
     
     - name: Review PR by Claude
       shell: bash
