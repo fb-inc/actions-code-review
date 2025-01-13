@@ -9,7 +9,7 @@ export const SYSTEM_PROMPT = `
 `
 
 export const MESSAGE_TEMPLATE = `
-以下のコード差分をレビューし、指摘箇所ごとにadd_reviewを使用してGithubにレビュー結果を反映してください。
+以下のコード差分をレビューし、指摘箇所ごとにtoolを使用してGithubにレビュー結果を反映してください。
 ---
 
 `
