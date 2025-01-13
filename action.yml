@@ -15,6 +15,7 @@ inputs:
     required: true
   target-path:
     description: '差分を取得するフォルダ。スペース区切りで指定。'
+    default: "force-app/main/default/classes client ':!*.xml'"
     required: false
   system-prompt:
     description: 'Claudeのシステムプロンプト'

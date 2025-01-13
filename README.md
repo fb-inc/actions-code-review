@@ -34,7 +34,7 @@ jobs:
       - uses: reusable-claude-review@main
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          target-path: 'client/ force-app/main/classes'  # オプション：レビュー対象のパスを指定
+          target-path: 'force-app/main/default/classes client ':!*.xml''  # オプション：レビュー対象のパスを指定
 ```
 
 ## 入力パラメータ
@@ -44,7 +44,7 @@ jobs:
 | `anthropic-api-key` | はい | - | Anthropic API キー |
 | `node-version` | いいえ | '20' | 使用する Node.js のバージョン |
 | `pnpm-version` | いいえ | '9' | 使用する pnpm のバージョン |
-| `target-path` | いいえ | - | レビュー対象のファイルパス（スペース区切りで複数指定可能） |
+| `target-path` | いいえ | force-app/main/default/classes client ':!*.xml' | レビュー対象のファイルパス（スペース区切りで複数指定可能） |
 | `system-prompt` | いいえ | デフォルトプロンプト | カスタムシステムプロンプト |
 | `message-template` | いいえ | デフォルトテンプレート | カスタムメッセージテンプレート |
 
