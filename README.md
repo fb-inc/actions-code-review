@@ -1,109 +1,75 @@
 # Claude PR Review Action
 
-Claude PR Review は、Anthropic の Claude AI を使用して Pull Request のレビューを自動化する GitHub Action です。
+Claude AIを活用したGitHubプルリクエストの自動レビューアクションです。コードの品質向上とレビュープロセスの効率化を支援します。
 
-## 機能
+## 主な機能
 
-- Pull Request の差分を自動的に分析
-- Claude AI による高品質なコードレビュー
-- GitHub PR コメントとしてレビュー結果を自動投稿
+このアクションは、プルリクエストに対して以下の2段階のレビューを実行します：
 
-## 必要要件
+1. システムレビュー：プルリクエスト全体を対象とした総合的な評価を行います。アーキテクチャの一貫性やシステム全体への影響を分析します。
 
-- Node.js 20以上
-- pnpm 9以上
-- Anthropic API キー
+2. 個別ファイルレビュー：各変更ファイルに対して詳細なレビューを実行します。コーディング規約、潜在的な問題、改善提案などを指摘します。
 
-## セットアップ
+## 使い方
 
-1. Anthropic API キーを取得します。
-2. GitHub リポジトリの Secrets に `ANTHROPIC_API_KEY` を追加します。
-3. ワークフローファイル（例：`.github/workflows/pr-review.yml`）を作成します。
+### 1. ワークフローの設定
+
+`.github/workflows/pr-review.yml`に以下の設定を追加します：
 
 ```yaml
 name: PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened]
 
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: reusable-claude-review@main
+      - uses: fb-inc/actions-code-review@v1
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          target-path: 'force-app/main/default/classes client ':!*.xml''  # オプション：レビュー対象のパスを指定
 ```
 
-## 入力パラメータ
+### 2. パラメータの説明
 
-| パラメータ | 必須 | デフォルト値 | 説明 |
-|------------|------|--------------|------|
-| `anthropic-api-key` | はい | - | Anthropic API キー |
-| `node-version` | いいえ | '20' | 使用する Node.js のバージョン |
-| `pnpm-version` | いいえ | '9' | 使用する pnpm のバージョン |
-| `target-path` | いいえ | force-app/main/default/classes client ':!*.xml' | レビュー対象のファイルパス（スペース区切りで複数指定可能） |
-| `system-prompt` | いいえ | デフォルトプロンプト | カスタムシステムプロンプト |
-| `message-template` | いいえ | デフォルトテンプレート | カスタムメッセージテンプレート |
+| パラメータ           | 必須 | デフォルト値                                       | 説明                                                                                                           |
+| -------------------- | ---- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| anthropic-api-key    | ○    | -                                                  | ClaudeによるコードレビューのためのAPIキー。GitHub Secretsでの管理を推奨。                                      |
+| node-version         | ×    | 22                                                 | 実行環境のNode.jsバージョン                                                                                    |
+| pnpm-version         | ×    | 9                                                  | パッケージマネージャのpnpmバージョン                                                                           |
+| target-path          | ×    | "force-app/main/default/classes client ':!\*.xml'" | レビュー対象のファイルやディレクトリをスペース区切りで指定。glob形式のパターンマッチングに対応。               |
+| unit-review-prompt   | ×    | 内蔵プロンプト                                     | 個別のファイルレビュー時の評価基準。コーディング規約、アーキテクチャ制約、パフォーマンス要件などを含める。     |
+| system-review-prompt | ×    | 内蔵プロンプト                                     | プルリクエスト全体のレビュー時の評価基準。システムアーキテクチャ、サービス間の依存関係、非機能要件などを評価。 |
+| pr-number            | ×    | ${{ github.event.pull_request.number }}            | プルリクエスト番号。手動実行時は明示的に指定可能。                                                             |
+| pr-body              | ×    | ${{ github.event.pull_request.body }}              | プルリクエストの説明文。レビュー時の文脈理解に使用。                                                           |
+| base-sha             | ×    | ${{ github.event.pull_request.base.sha }}          | 比較元のコミットハッシュ。差分の取得に使用。                                                                   |
+| head-sha             | ×    | ${{ github.event.pull_request.head.sha }}          | 比較先のコミットハッシュ。base-shaとの差分を取得。                                                             |
 
-## 使用しているライブラリ
+### 3. カスタマイズ
 
-- @anthropic-ai/sdk: ^0.33.1
-- @octokit/rest: ^21.0.2
-- zod: ^3.24.1
-- TypeScript: ^5.7.2
-
-## ディレクトリ構造
-
-```
-src/
-  schemas/          # 入出力スキーマの定義
-    request.ts      # レビューリクエストのスキーマ
-  prompt.ts         # プロンプトテンプレート
-  review.ts         # メインのレビューロジック
-```
-
-## ローカル開発
-
-```bash
-# 依存関係のインストール
-pnpm install
-
-# TypeScriptのビルド
-pnpm build
-
-# リンター実行
-pnpm lint
-
-# コードフォーマット
-pnpm format
-```
-
-## カスタマイズ
-
-プロンプトとメッセージテンプレートをカスタマイズできます：
+レビュー基準は`unit-review-prompt`と`system-review-prompt`で調整可能です。以下は設定例です：
 
 ```yaml
-- uses: fb-inc/action-code-review@main
-  with:
-    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-    system-prompt: |
-      あなたはシニアソフトウェアエンジニアとして、以下の観点でレビューを行います：
-      - アーキテクチャの一貫性
-      - エラーハンドリング
-      - ドキュメンテーション
-    message-template: |
-      以下のコード差分について、重要度の高い問題を優先的に指摘してください。
+with:
+  unit-review-prompt: |
+    以下の観点でレビューを行ってください：
+    - 命名規則の遵守
+    - テストの充実度
+    - エラーハンドリング
+  system-review-prompt: |
+    以下の点に注目してレビューを行ってください：
+    - マイクロサービス間の整合性
+    - セキュリティリスク
+    - パフォーマンスへの影響
 ```
 
-## 注意事項
+## 開発者向け情報
 
-- Anthropic API の利用料金が発生します。
-- 大規模な差分ファイルの場合、レビュー時間が長くなる可能性があります。
-- センシティブな情報は Claude AI に送信しないようご注意ください。
-- コメントはファイル単位、単一行、複数行の範囲に対して行うことができます。
+- Node.js v22以降
+- pnpm v9以降
+- Claude 3.5 Sonnet（2024年10月22日版）使用
 
 ## ライセンス
 

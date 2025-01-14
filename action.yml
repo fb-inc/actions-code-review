@@ -1,95 +1,98 @@
-name: 'Claude PR Review'
-description: 'Review pull requests using Claude AI'
+name: Claude PR Review
 
 inputs:
   node-version:
-    description: 'Node.js version'
-    default: '20'
-    required: false
+    default: 22
   pnpm-version:
-    description: 'pnpm version'
-    default: '9'
-    required: false
+    default: 9
   anthropic-api-key:
-    description: 'Anthropic API key'
     required: true
+    description: |
+      Claudeによるコードレビューを実行するために必要なAnthropicのAPIキーです。
+      セキュリティ上、GitHub Secretsとして管理することを推奨します。
+  pr-number:
+    default: ${{ github.event.pull_request.number }}
+    description: プルリクエスト番号です。デフォルトでは現在のPRの番号が自動的に設定されます。手動でレビューを実行する場合は、この値を明示的に指定することができます。
+  pr-body:
+    default: ${{ github.event.pull_request.body }}
+    description: プルリクエストの説明文（本文）です。デフォルトでは現在のPRの本文が自動的に設定されます。この内容はレビュー時の文脈理解に使用されます。
+  base-sha:
+    default: ${{ github.event.pull_request.base.sha }}
+    description: 比較元のコミットハッシュです。通常はプルリクエストのベースブランチ（マージ先）の最新コミットが設定されます。差分の取得に使用されます。
+  head-sha:
+    default: ${{ github.event.pull_request.head.sha }}
+    description: 比較先のコミットハッシュです。通常はプルリクエストのヘッドブランチ（マージ元）の最新コミットが設定されます。base-shaとの差分を取得する際に使用されます。
   target-path:
-    description: '差分を取得するフォルダ。スペース区切りで指定。'
     default: "force-app/main/default/classes client ':!*.xml'"
-    required: false
-  system-prompt:
-    description: 'Claudeのシステムプロンプト'
-    required: false
-  message-template:
-    description: 'Claudeへのメッセージテンプレート'
-    required: false
+    description: |
+      レビュー対象のファイルやディレクトリをスペース区切りで指定します。
+      glob形式のパターンマッチングに対応しており、特定の拡張子の除外も可能です。
+  unit-review-prompt:
+    description: |
+      個別のファイルレビュー時の評価基準やガイドラインを指定します。
+      コーディング規約、アーキテクチャ制約、パフォーマンス要件などを含めることができます。
+      空の場合はデフォルトの基準が適用されます。
+  system-review-prompt:
+    description: |
+      プルリクエスト全体のレビュー時の評価基準やガイドラインを指定します。
+      システムアーキテクチャ、サービス間の依存関係、非機能要件などの観点で
+      変更の影響を評価する際の基準として使用されます。
+      空の場合はデフォルトの基準が適用されます。
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
-    - uses: pnpm/action-setup@v3
+
+    - uses: pnpm/action-setup@v4
       with:
         version: ${{ inputs.pnpm-version }}
         run_install: false
-    
+
     - uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-    
+
     - name: Get pnpm store directory
       shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-    
+      working-directory: ${{ github.action_path }}
+      run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
     - uses: actions/cache@v4
       name: Setup pnpm cache
       with:
         path: ${{ env.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-    
+        restore-keys: ${{ runner.os }}-pnpm-store-
+
     - name: Display Versions
       shell: bash
-      run: |
-        cd ${{ github.action_path }}
-        pnpm -v && node -v
-    
-    - name: Install Package
+      working-directory: ${{ github.action_path }}
+      run: pnpm -v && node -v
+
+    - name: Install Dependencies
       shell: bash
-      run: |
-        cd ${{ github.action_path }}
-        pnpm i
-    
-    - name: Install Dependencies in Action Directory
-      shell: bash
-      run: |
-        cd ${{ github.action_path }}
-        pnpm install --frozen-lockfile
-    
+      working-directory: ${{ github.action_path }}
+      run: pnpm i --frozen-lockfile
+
     - name: Get PR diff
-      id: diff
       shell: bash
-      run: |
-        cd ${{ github.action_path }}
-        git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ inputs.target-path }} > diff.txt
-    
+      run: git diff ${{ inputs.base-sha }} ${{ inputs.head-sha }} ${{ inputs.target-path }} > ${{ github.action_path }}/diff.txt
+
     - name: Review PR by Claude
       shell: bash
-      run: |
-        cd ${{ github.action_path }}
-        pnpm node --no-warnings --loader ts-node/esm ./src/review.ts
+      working-directory: ${{ github.action_path }}
       env:
-        GITHUB_TOKEN: ${{ github.token }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        UNIT_REVIEW_PROMPT: ${{ inputs.unit-review-prompt }}
+        SYSTEM_REVIEW_PROMPT: ${{ inputs.system-review-prompt }}
+        GITHUB_TOKEN: ${{ github.token }}
         OWNER: ${{ github.repository_owner }}
         REPO: ${{ github.event.repository.name }}
-        PULL_NUMBER: ${{ github.event.pull_request.number }}
-        COMMIT_ID: ${{ github.event.pull_request.head.sha }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        COMMIT_ID: ${{ inputs.head-sha }}
+        PR_BODY: ${{ inputs.pr-body }}
         DIFF_FILE_PATH: diff.txt
-        SYSTEM_PROMPT: ${{ inputs.system-prompt }}
-        MESSAGE_TEMPLATE: ${{ inputs.message-template }}
+      run: node --no-warnings --loader ts-node/esm ./src/index.mts

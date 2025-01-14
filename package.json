@@ -1,15 +1,25 @@
 {
-  "name": "reusable-claude-review",
-  "version": "1.0.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.33.1",
+    "@octokit/rest": "21.1.0",
+    "@types/backoff": "2.5.5",
+    "backoff": "2.5.0",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.3",
+    "zod": "3.24.1",
+    "zod-to-json-schema": "3.24.1"
+  },
   "description": "A reusable GitHub Actions workflow for PR reviews using Claude",
-  "type": "module",
-  "main": "dist/review.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node --no-warnings --loader ts-node/esm ./src/review.ts",
-    "test": "jest",
-    "lint": "eslint . --ext .ts",
-    "format": "prettier --write ."
+  "devDependencies": {
+    "@types/node": "22.10.7",
+    "@typescript-eslint/eslint-plugin": "8.20.0",
+    "@typescript-eslint/parser": "8.20.0",
+    "eslint": "9.18.0",
+    "prettier": "3.4.2"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
   },
   "keywords": [
     "github-actions",
@@ -17,25 +27,7 @@
     "claude",
     "anthropic"
   ],
-  "author": "",
   "license": "MIT",
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.33.1",
-    "@octokit/rest": "^21.0.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.7.2",
-    "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.24.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@typescript-eslint/eslint-plugin": "^8.18.2",
-    "@typescript-eslint/parser": "^8.18.2",
-    "eslint": "^9.17.0",
-    "prettier": "^3.4.2"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
-  }
+  "name": "actions-code-review",
+  "type": "module"
 }
